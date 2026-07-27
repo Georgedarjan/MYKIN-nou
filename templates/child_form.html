@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Editează datele{% endblock %}
+{% block body %}
+<div class="topbar">
+  <div class="brand"><span class="dot"></span> MyKin</div>
+  <a href="{{ url_for('dashboard') }}">Înapoi</a>
+</div>
+
+<div class="card">
+  <h1>Editează datele</h1>
+  <p class="muted small">Bifează ce vrei să fie vizibil când cineva scanează brățara.
+    Numărul de telefon e mereu afișat.</p>
+
+  <form method="post">
+    <label>Numele copilului</label>
+    <input type="text" name="name" value="{{ child.name }}" required>
+
+    <label>Numărul tău de telefon *</label>
+    <input type="tel" name="parent_phone" value="{{ child.parent_phone }}" required>
+
+    <label>Contact secundar</label>
+    <input type="tel" name="parent_phone_2" value="{{ child.parent_phone_2 or '' }}">
+
+    <label>Alergii</label>
+    <textarea name="allergies">{{ child.allergies or '' }}</textarea>
+
+    <label>Condiții medicale</label>
+    <textarea name="medical">{{ child.medical or '' }}</textarea>
+
+    <label>Alte informații</label>
+    <textarea name="notes">{{ child.notes or '' }}</textarea>
+
+    <h2 style="margin-top:24px;">Ce e vizibil public</h2>
+    <div class="checkbox-row">
+      <input type="checkbox" id="show_name" name="show_name" {% if child.show_name %}checked{% endif %}>
+      <label for="show_name">Numele copilului</label>
+    </div>
+    <div class="checkbox-row">
+      <input type="checkbox" id="show_allergies" name="show_allergies" {% if child.show_allergies %}checked{% endif %}>
+      <label for="show_allergies">Alergiile</label>
+    </div>
+    <div class="checkbox-row">
+      <input type="checkbox" id="show_medical" name="show_medical" {% if child.show_medical %}checked{% endif %}>
+      <label for="show_medical">Condițiile medicale</label>
+    </div>
+    <div class="checkbox-row">
+      <input type="checkbox" id="show_notes" name="show_notes" {% if child.show_notes %}checked{% endif %}>
+      <label for="show_notes">Alte informații</label>
+    </div>
+
+    <button class="btn" type="submit">Salvează</button>
+  </form>
+</div>
+{% endblock %}

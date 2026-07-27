@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}MyKin — Brățara de siguranță{% endblock %}
+{% block wrapclass %}center-narrow{% endblock %}
+{% block body %}
+<div class="brand"><span class="dot"></span> MyKin</div>
+<div class="card">
+  <h1>Contul MyKin</h1>
+  <p class="muted">Gestionează datele copiilor și brățările de siguranță.</p>
+  <a class="btn" href="{{ url_for('login') }}">Intră în cont</a>
+  <a class="btn btn-ghost" href="{{ url_for('register') }}">Creează cont</a>
+</div>
+<p class="footer-note">Ai o brățară? Scaneaz-o cu telefonul ca să o activezi.</p>
+{% endblock %}

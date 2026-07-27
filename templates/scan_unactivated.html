@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Activează brățara{% endblock %}
+{% block wrapclass %}center-narrow{% endblock %}
+{% block body %}
+<div class="brand"><span class="dot"></span> MyKin</div>
+<div class="card">
+  <h1>Brățară nouă MyKin</h1>
+  <p class="muted">Această brățară nu este încă activată. Dacă tocmai ai primit-o,
+    creează un cont și adaugă datele copilului — durează 2 minute.</p>
+  <a class="btn" href="{{ url_for('register', next=url_for('activate', code=code)) }}">Creează cont și activează</a>
+  <a class="btn btn-ghost" href="{{ url_for('login', next=url_for('activate', code=code)) }}">Am deja cont</a>
+</div>
+<p class="footer-note">Cod brățară: {{ code }}</p>
+{% endblock %}

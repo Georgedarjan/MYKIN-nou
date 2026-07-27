@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Contactează părintele{% endblock %}
+{% block body %}
+
+<div class="scan-hero">
+  <span class="scan-eyebrow">Ați găsit un copil</span>
+
+  {% if child.show_name and child.name %}
+    <div class="child-name">{{ child.name }}</div>
+    <div class="child-sub">Sunați părintele — vă răspunde imediat.</div>
+  {% else %}
+    <div class="child-name">Acest copil are nevoie de ajutor</div>
+    <div class="child-sub">Sunați părintele — vă răspunde imediat.</div>
+  {% endif %}
+
+  <a class="call-btn" href="tel:{{ child.parent_phone }}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+    Sună părintele
+  </a>
+
+  {% if child.parent_phone_2 %}
+  <a class="call-btn" href="tel:{{ child.parent_phone_2 }}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+    Contact secundar
+  </a>
+  {% endif %}
+
+  {% if child.show_allergies and child.allergies %}
+  <div class="alert-card">
+    <div class="info-label">⚠️ Alergii</div>
+    <div class="info-value">{{ child.allergies }}</div>
+  </div>
+  {% endif %}
+
+  {% if child.show_medical and child.medical %}
+  <div class="alert-card">
+    <div class="info-label">⚕️ Condiții medicale</div>
+    <div class="info-value">{{ child.medical }}</div>
+  </div>
+  {% endif %}
+
+  {% if child.show_notes and child.notes %}
+  <div class="info-block card">
+    <div class="info-row">
+      <div class="info-label">De reținut</div>
+      <div class="info-value">{{ child.notes }}</div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if is_owner %}
+  <p class="footer-note">Vedeți pagina publică a propriei brățări.
+    <a class="link" href="{{ url_for('dashboard') }}">Înapoi la cont</a></p>
+  {% else %}
+  <p class="footer-note">Părintele a fost anunțat automat că brățara a fost scanată.</p>
+  {% endif %}
+</div>
+
+{# Cere locația găsitorului (opțional) și o trimite discret pentru alerta părintelui #}
+{% if not is_owner %}
+<script>
+  if (navigator.geolocation && !window.location.search.includes('lat')) {
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      var u = new URL(window.location.href);
+      u.searchParams.set('lat', pos.coords.latitude.toFixed(5));
+      u.searchParams.set('lng', pos.coords.longitude.toFixed(5));
+      // reîncarcă discret o singură dată ca să salveze locația în alertă
+      fetch(u.toString(), { method: 'GET' });
+    });
+  }
+</script>
+{% endif %}
+
+{% endblock %}

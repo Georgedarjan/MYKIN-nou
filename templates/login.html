@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Autentificare{% endblock %}
+{% block wrapclass %}center-narrow{% endblock %}
+{% block body %}
+<div class="brand"><span class="dot"></span> MyKin</div>
+<div class="card">
+  <h1>Autentificare</h1>
+  <form method="post">
+    <label>Email</label>
+    <input type="email" name="email" required>
+    <label>Parolă</label>
+    <input type="password" name="password" required>
+    <button class="btn" type="submit">Intră în cont</button>
+  </form>
+</div>
+<p class="footer-note">Nu ai cont? <a class="link" href="{{ url_for('register') }}">Creează unul</a></p>
+{% endblock %}
