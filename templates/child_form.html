@@ -2,16 +2,16 @@
 {% block title %}Editează datele{% endblock %}
 {% block body %}
 <div class="topbar">
-  <div class="brand"><span class="dot"></span> MyKin</div>
+  <a class="brand" href="{{ url_for('dashboard') }}"><span class="dot"></span> MyKin</a>
   <a href="{{ url_for('dashboard') }}">Înapoi</a>
 </div>
 
 <div class="card">
   <h1>Editează datele</h1>
-  <p class="muted small">Bifează ce vrei să fie vizibil când cineva scanează brățara.
-    Numărul de telefon e mereu afișat.</p>
+  <p class="muted small">Bifează ce vrei să fie vizibil când cineva scanează
+    brățara. Numărul de telefon e mereu afișat.</p>
 
-  <form method="post">
+  <form method="post" enctype="multipart/form-data">
     <label>Numele copilului</label>
     <input type="text" name="name" value="{{ child.name }}" required>
 
@@ -30,7 +30,22 @@
     <label>Alte informații</label>
     <textarea name="notes">{{ child.notes or '' }}</textarea>
 
-    <h2 style="margin-top:24px;">Ce e vizibil public</h2>
+    <label>Poza copilului (opțional)</label>
+    {% if child.photo_url %}
+      <div style="display:flex; align-items:center; gap:14px; margin-bottom:8px;">
+        <img src="{{ child.photo_url }}" alt=""
+             style="width:56px; height:56px; border-radius:12px; object-fit:cover;">
+        <label class="checkbox-row" style="margin:0;">
+          <input type="checkbox" name="remove_photo" style="width:18px;height:18px;">
+          <span class="small">Șterge poza</span>
+        </label>
+      </div>
+    {% endif %}
+    <input type="file" name="photo" accept="image/*">
+    <p class="small muted" style="margin-top:6px;">Alege o poză nouă doar dacă vrei
+      să o schimbi.</p>
+
+    <h2 style="margin-top:26px;">Ce e vizibil public</h2>
     <div class="checkbox-row">
       <input type="checkbox" id="show_name" name="show_name" {% if child.show_name %}checked{% endif %}>
       <label for="show_name">Numele copilului</label>

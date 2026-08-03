@@ -1,3 +1,4 @@
+import os
 import smtplib
 from email.mime.text import MIMEText
 from datetime import datetime
@@ -21,6 +22,49 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
 login_manager.login_message = "Autentifică-te ca să continui."
+
+
+# ---------------------------------------------------------------------------
+# CLOUDINARY — stocarea pozelor (opțional; funcționează doar dacă e configurat)
+# ---------------------------------------------------------------------------
+import cloudinary
+import cloudinary.uploader
+
+_CLOUD_NAME = os.environ.get("CLOUDINARY_CLOUD_NAME", "")
+_CLOUD_KEY = os.environ.get("CLOUDINARY_API_KEY", "")
+_CLOUD_SECRET = os.environ.get("CLOUDINARY_API_SECRET", "")
+CLOUDINARY_ENABLED = bool(_CLOUD_NAME and _CLOUD_KEY and _CLOUD_SECRET)
+
+if CLOUDINARY_ENABLED:
+    cloudinary.config(
+        cloud_name=_CLOUD_NAME,
+        api_key=_CLOUD_KEY,
+        api_secret=_CLOUD_SECRET,
+        secure=True,
+    )
+
+
+def upload_child_photo(file_storage):
+    """Urcă poza la Cloudinary și întoarce URL-ul. Întoarce None dacă nu e
+    configurat, nu s-a trimis fișier, sau upload-ul eșuează. Poza e opțională,
+    deci orice eșec nu blochează salvarea restului datelor."""
+    if not CLOUDINARY_ENABLED:
+        return None
+    if not file_storage or not file_storage.filename:
+        return None
+    try:
+        result = cloudinary.uploader.upload(
+            file_storage,
+            folder="mykin_children",
+            transformation=[
+                {"width": 600, "height": 600, "crop": "limit"},  # redimensionare
+                {"quality": "auto", "fetch_format": "auto"},      # optimizare
+            ],
+        )
+        return result.get("secure_url")
+    except Exception as e:
+        app.logger.warning(f"Upload poză eșuat: {e}")
+        return None
 
 
 @login_manager.user_loader
@@ -124,6 +168,7 @@ def activate(code):
         child_id = request.form.get("child_id")
         if child_id == "new" or not children:
             # Creează un copil nou din datele formularului
+            photo_url = upload_child_photo(request.files.get("photo"))
             child = Child(
                 user_id=current_user.id,
                 name=request.form["name"].strip(),
@@ -132,6 +177,7 @@ def activate(code):
                 allergies=request.form.get("allergies", "").strip() or None,
                 medical=request.form.get("medical", "").strip() or None,
                 notes=request.form.get("notes", "").strip() or None,
+                photo_url=photo_url,
             )
             db.session.add(child)
             db.session.flush()  # ca să avem child.id
@@ -226,6 +272,13 @@ def edit_child(child_id):
         child.show_allergies = "show_allergies" in request.form
         child.show_medical = "show_medical" in request.form
         child.show_notes = "show_notes" in request.form
+        # poză nouă (opțional) - doar dacă părintele a ales una, o înlocuim
+        new_photo = upload_child_photo(request.files.get("photo"))
+        if new_photo:
+            child.photo_url = new_photo
+        # dacă a bifat "șterge poza"
+        if request.form.get("remove_photo"):
+            child.photo_url = None
         db.session.commit()
         flash("Datele au fost salvate.")
         return redirect(url_for("dashboard"))

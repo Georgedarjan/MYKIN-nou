@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 {% block title %}Activează brățara{% endblock %}
 {% block body %}
-<div class="brand"><span class="dot"></span> MyKin</div>
+<a class="brand" href="{{ url_for('dashboard') }}"><span class="dot"></span> MyKin</a>
 <div class="card">
   <h1>Activează brățara</h1>
-  <p class="muted">Completează datele care vor apărea când cineva scanează brățara.
-    Tu alegi ce e vizibil.</p>
+  <p class="muted small">Completează datele care vor apărea când cineva scanează
+    brățara. Tu alegi ce e vizibil.</p>
 
-  <form method="post">
+  <form method="post" enctype="multipart/form-data">
     {% if children %}
       <label for="child_id">Pentru cine e brățara?</label>
       <select name="child_id" id="child_id" onchange="document.getElementById('newfields').style.display = this.value==='new' ? 'block':'none'">
@@ -38,6 +38,11 @@
 
         <label>Alte informații (opțional)</label>
         <textarea name="notes" placeholder="ex: nu vorbește româna, poartă aparat auditiv"></textarea>
+
+        <label>Poza copilului (opțional)</label>
+        <input type="file" name="photo" accept="image/*">
+        <p class="small muted" style="margin-top:6px;">Ajută persoana care găsește
+          copilul să confirme că e el. O poți adăuga și mai târziu.</p>
       </div>
 
     <button class="btn" type="submit">Activează brățara</button>
