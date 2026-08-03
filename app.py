@@ -269,6 +269,25 @@ def index():
 
 
 # ---------------------------------------------------------------------------
+# RUTĂ TEMPORARĂ — adaugă coloana photo_url la tabelul children dacă lipsește.
+# Acceseaz-o o singură dată după ce adaugi câmpul poză. ȘTERGE-O după!
+# ---------------------------------------------------------------------------
+from sqlalchemy import text as _sql_text
+
+@app.route("/migreaza-photo-url")
+def migreaza_photo_url():
+    try:
+        with db.engine.connect() as conn:
+            conn.execute(_sql_text(
+                "ALTER TABLE children ADD COLUMN IF NOT EXISTS photo_url VARCHAR(500)"
+            ))
+            conn.commit()
+        return "Gata: coloana photo_url a fost adăugată (sau exista deja). Poți șterge această rută acum."
+    except Exception as e:
+        return f"Eroare la migrare: {e}", 500
+
+
+# ---------------------------------------------------------------------------
 # RUTĂ TEMPORARĂ DE TEST — generează o brățară nouă și te duce la activarea ei.
 # Utilă cât nu ai acces la Shell (plan Free). ȘTERGE-O înainte de lansarea reală!
 # Accesează: https://mykin-nou.onrender.com/genereaza-bratara-test
