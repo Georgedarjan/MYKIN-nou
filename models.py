@@ -38,6 +38,7 @@ class Child(db.Model):
     allergies = db.Column(db.Text)
     medical = db.Column(db.Text)
     notes = db.Column(db.Text)  # ex: "Nu vorbește româna", "poartă aparat auditiv"
+    photo_url = db.Column(db.String(500))  # link poză (Cloudinary), opțional
 
     # Toggle-uri de vizibilitate publică. Numărul de telefon e mereu vizibil
     # (altfel produsul nu are sens), dar restul le controlează părintele.
