@@ -82,7 +82,8 @@
     });
   }
 
-  // Buton WhatsApp: cere locația, apoi deschide WhatsApp cu mesaj pre-completat
+  // Buton WhatsApp: deschide WhatsApp cu mesaj pre-completat.
+  // Locația e bonus - dacă e disponibilă rapid o adaugă, altfel deschide oricum.
   (function () {
     var waBtn = document.getElementById('wa-btn');
     if (!waBtn) return;
@@ -90,41 +91,57 @@
     var childName = {{ (child.name if child.show_name and child.name else '')|tojson }};
     var parentPhone = {{ child.parent_phone|tojson }};
 
-    // Curăță numărul pentru wa.me (doar cifre, cu prefix de țară).
-    // Presupune numere românești: 07xxxxxxxx -> 407xxxxxxxx
     function normalizePhone(p) {
       var d = (p || '').replace(/[^0-9]/g, '');
-      if (d.indexOf('0') === 0) { d = '4' + d; }        // 07... -> 407...
-      if (d.indexOf('40') !== 0 && d.indexOf('4') === 0) { /* deja ok */ }
+      if (d.indexOf('0') === 0) { d = '4' + d; }  // 07... -> 407...
       return d;
+    }
+
+    function waUrl(mapsLink) {
+      var whoText = childName ? ('lui ' + childName) : 'copilul dumneavoastră';
+      var msg = 'Bună ziua! Am găsit ' + whoText + '. ' +
+                (mapsLink ? ('Mă aflu aici: ' + mapsLink) : 'Vă rog sunați-mă.');
+      return 'https://wa.me/' + normalizePhone(parentPhone) +
+             '?text=' + encodeURIComponent(msg);
     }
 
     waBtn.addEventListener('click', function (e) {
       e.preventDefault();
-      var whoText = childName ? ('lui ' + childName) : 'copilul dumneavoastră';
 
-      function openWhatsApp(mapsLink) {
-        var msg = 'Bună ziua! Am găsit ' + whoText + '. ' +
-                  (mapsLink ? ('Mă aflu aici: ' + mapsLink) : 'Vă rog sunați-mă.');
-        var phone = normalizePhone(parentPhone);
-        var url = 'https://wa.me/' + phone + '?text=' + encodeURIComponent(msg);
-        window.open(url, '_blank');
+      // GARANȚIE: dacă în 2.5s nu avem locația (blocată/lentă/fără callback),
+      // deschidem WhatsApp fără hartă. Pe mobil, când permisiunea e blocată,
+      // callback-ul de eroare uneori nu se declanșează - de asta forțăm noi.
+      var opened = false;
+      function go(url) {
+        if (opened) return;
+        opened = true;
+        window.location.href = url;
       }
 
+      var timer = setTimeout(function () { go(waUrl(null)); }, 2500);
+
       if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          function (pos) {
-            var lat = pos.coords.latitude.toFixed(5);
-            var lng = pos.coords.longitude.toFixed(5);
-            openWhatsApp('https://maps.google.com/?q=' + lat + ',' + lng);
-          },
-          function () {
-            // dacă refuză locația, deschide WhatsApp fără hartă
-            openWhatsApp(null);
-          }
-        );
+        try {
+          navigator.geolocation.getCurrentPosition(
+            function (pos) {
+              clearTimeout(timer);
+              var lat = pos.coords.latitude.toFixed(5);
+              var lng = pos.coords.longitude.toFixed(5);
+              go(waUrl('https://maps.google.com/?q=' + lat + ',' + lng));
+            },
+            function () {
+              clearTimeout(timer);
+              go(waUrl(null));  // locație refuzată/blocată -> deschide oricum
+            },
+            { enableHighAccuracy: true, timeout: 2500, maximumAge: 60000 }
+          );
+        } catch (err) {
+          clearTimeout(timer);
+          go(waUrl(null));
+        }
       } else {
-        openWhatsApp(null);
+        clearTimeout(timer);
+        go(waUrl(null));
       }
     });
   })();
