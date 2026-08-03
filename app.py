@@ -149,7 +149,7 @@ def scan(code):
         db.session.commit()
         send_scan_alert(child, scan_row)
 
-    return render_template("scan_public.html", child=child, is_owner=is_owner)
+    return render_template("scan_public.html", child=child, band=band, is_owner=is_owner)
 
 
 @app.route("/b/<code>/activate", methods=["GET", "POST"])

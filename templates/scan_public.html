@@ -77,7 +77,13 @@
   <p class="footer-note">Vedeți pagina publică a propriei brățări.
     <a class="link" href="{{ url_for('dashboard') }}">Înapoi la cont</a></p>
   {% else %}
-  <p class="footer-note">Părintele a fost anunțat automat că brățara a fost scanată.</p>
+  <p class="footer-note" style="margin-top:28px;">
+    Protejează-ți copilul cu o brățară MyKin &rarr;
+    <a class="link" href="https://mykin.ro">mykin.ro</a>
+  </p>
+  <p class="footer-note" style="margin-top:10px;">
+    Ești părintele? <a class="link" href="{{ url_for('login', next=url_for('scan', code=band.code)) }}">Autentifică-te</a>
+  </p>
   {% endif %}
 </div>
 
