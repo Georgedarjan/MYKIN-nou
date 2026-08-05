@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Admin — MyKin{% endblock %}
+{% block wrapclass %}center-narrow{% endblock %}
+{% block body %}
+<a class="brand" href="{{ url_for('index') }}"><span class="dot"></span> MyKin</a>
+<div class="card">
+  <h1>Panou administrare</h1>
+  <p class="muted small">Acces restricționat. Introdu parola de administrator.</p>
+  <form method="post">
+    <label>Parolă admin</label>
+    <input type="password" name="password" required autofocus>
+    <button class="btn" type="submit">Intră</button>
+  </form>
+</div>
+{% endblock %}

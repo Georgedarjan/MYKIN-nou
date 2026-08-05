@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Admin — MyKin{% endblock %}
+{% block wrapclass %}admin-wrap{% endblock %}
+{% block body %}
+<div class="topbar">
+  <a class="brand" href="{{ url_for('admin_dashboard') }}"><span class="dot"></span> MyKin Admin</a>
+  <a href="{{ url_for('admin_logout') }}">Ieși</a>
+</div>
+
+<div class="stats-grid">
+  <div class="stat"><div class="stat-num">{{ stats.total_bands }}</div><div class="stat-lbl">Brățări total</div></div>
+  <div class="stat"><div class="stat-num">{{ stats.active_bands }}</div><div class="stat-lbl">Activate</div></div>
+  <div class="stat"><div class="stat-num">{{ stats.unactivated_bands }}</div><div class="stat-lbl">Libere</div></div>
+  <div class="stat"><div class="stat-num">{{ stats.disabled_bands }}</div><div class="stat-lbl">Dezactivate</div></div>
+  <div class="stat"><div class="stat-num">{{ stats.total_users }}</div><div class="stat-lbl">Clienți</div></div>
+  <div class="stat"><div class="stat-num">{{ stats.total_children }}</div><div class="stat-lbl">Copii</div></div>
+</div>
+
+<form method="get" class="admin-search">
+  <input type="text" name="q" value="{{ q }}" placeholder="Caută după cod brățară sau nume copil...">
+  <button class="btn btn-sm" type="submit" style="margin-top:0;">Caută</button>
+</form>
+
+{% if q and children %}
+<h2 style="margin-top:24px;">Copii găsiți</h2>
+{% for c in children %}
+<div class="admin-row">
+  <div>
+    <div class="admin-row-title">{{ c.name }}</div>
+    <div class="admin-row-meta">{{ c.parent_phone }}{% if c.allergies %} · alergii: {{ c.allergies }}{% endif %}</div>
+  </div>
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('admin_edit_child', child_id=c.id) }}">Editează</a>
+</div>
+{% endfor %}
+{% endif %}
+
+<h2 style="margin-top:24px;">
+  {% if q %}Brățări găsite{% else %}Ultimele brățări{% endif %}
+</h2>
+{% if not bands %}
+  <p class="muted small">Nicio brățară găsită.</p>
+{% endif %}
+{% for band in bands %}
+<div class="admin-row">
+  <div>
+    <div class="admin-row-title">
+      {{ band.code }}
+      <span class="band-pill {{ band.status }}">
+        {% if band.status == 'active' %}Activă{% elif band.status == 'disabled' %}Dezactivată{% else %}Liberă{% endif %}
+      </span>
+    </div>
+    {% if band.child %}
+      <div class="admin-row-meta">{{ band.child.name }} · {{ band.child.parent_phone }}</div>
+    {% else %}
+      <div class="admin-row-meta">neactivată</div>
+    {% endif %}
+  </div>
+  <div style="display:flex; gap:8px; align-items:center;">
+    {% if band.child %}
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('admin_edit_child', child_id=band.child.id) }}">Editează</a>
+    {% endif %}
+    {% if band.status in ['active','disabled'] %}
+    <form method="post" action="{{ url_for('admin_toggle_band', band_id=band.id, q=q) }}" style="margin:0;">
+      <button class="btn btn-sm {% if band.status=='active' %}btn-danger{% else %}btn-ghost{% endif %}" type="submit" style="margin-top:0;">
+        {% if band.status == 'active' %}Dezactivează{% else %}Reactivează{% endif %}
+      </button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

@@ -4,7 +4,7 @@ from email.mime.text import MIMEText
 from datetime import datetime
 
 from flask import (
-    Flask, render_template, request, redirect, url_for, flash, abort
+    Flask, render_template, request, redirect, url_for, flash, abort, session
 )
 from flask_login import (
     LoginManager, login_user, logout_user, login_required, current_user
@@ -380,6 +380,119 @@ def genereaza_bratara_test():
         f"{items}"
         f"</div>"
     )
+
+
+# ---------------------------------------------------------------------------
+# PANOU ADMIN — acces total (protejat cu parolă din variabila ADMIN_PASSWORD)
+# ---------------------------------------------------------------------------
+from functools import wraps
+
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
+
+
+def admin_required(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if not session.get("is_admin"):
+            return redirect(url_for("admin_login"))
+        return f(*args, **kwargs)
+    return wrapper
+
+
+@app.route("/admin/login", methods=["GET", "POST"])
+def admin_login():
+    if session.get("is_admin"):
+        return redirect(url_for("admin_dashboard"))
+    if request.method == "POST":
+        pw = request.form.get("password", "")
+        if ADMIN_PASSWORD and pw == ADMIN_PASSWORD:
+            session["is_admin"] = True
+            return redirect(url_for("admin_dashboard"))
+        flash("Parolă greșită.")
+    return render_template("admin_login.html")
+
+
+@app.route("/admin/logout")
+def admin_logout():
+    session.pop("is_admin", None)
+    return redirect(url_for("admin_login"))
+
+
+@app.route("/admin")
+@admin_required
+def admin_dashboard():
+    q = request.args.get("q", "").strip()
+
+    total_bands = Band.query.count()
+    active_bands = Band.query.filter_by(status="active").count()
+    unactivated_bands = Band.query.filter_by(status="unactivated").count()
+    disabled_bands = Band.query.filter_by(status="disabled").count()
+    total_users = User.query.count()
+    total_children = Child.query.count()
+
+    # căutare după cod de brățară sau nume copil
+    if q:
+        bands = Band.query.filter(Band.code.ilike(f"%{q}%")).order_by(Band.id.desc()).all()
+        children = Child.query.filter(Child.name.ilike(f"%{q}%")).all()
+    else:
+        bands = Band.query.order_by(Band.id.desc()).limit(100).all()
+        children = []
+
+    stats = {
+        "total_bands": total_bands,
+        "active_bands": active_bands,
+        "unactivated_bands": unactivated_bands,
+        "disabled_bands": disabled_bands,
+        "total_users": total_users,
+        "total_children": total_children,
+    }
+    return render_template("admin_dashboard.html", stats=stats, bands=bands,
+                           children=children, q=q)
+
+
+@app.route("/admin/child/<int:child_id>", methods=["GET", "POST"])
+@admin_required
+def admin_edit_child(child_id):
+    child = db.session.get(Child, child_id)
+    if not child:
+        abort(404)
+
+    if request.method == "POST":
+        child.name = request.form["name"].strip()
+        child.parent_phone = request.form["parent_phone"].strip()
+        child.parent_phone_2 = request.form.get("parent_phone_2", "").strip() or None
+        child.allergies = request.form.get("allergies", "").strip() or None
+        child.medical = request.form.get("medical", "").strip() or None
+        child.notes = request.form.get("notes", "").strip() or None
+        child.show_name = "show_name" in request.form
+        child.show_allergies = "show_allergies" in request.form
+        child.show_medical = "show_medical" in request.form
+        child.show_notes = "show_notes" in request.form
+        new_photo = upload_child_photo(request.files.get("photo"))
+        if new_photo:
+            child.photo_url = new_photo
+        if request.form.get("remove_photo"):
+            child.photo_url = None
+        db.session.commit()
+        flash(f"Datele lui {child.name} au fost salvate.")
+        return redirect(url_for("admin_dashboard"))
+
+    owner = db.session.get(User, child.user_id)
+    return render_template("admin_child_edit.html", child=child, owner=owner)
+
+
+@app.route("/admin/band/<int:band_id>/toggle", methods=["POST"])
+@admin_required
+def admin_toggle_band(band_id):
+    band = db.session.get(Band, band_id)
+    if not band:
+        abort(404)
+    if band.status == "active":
+        band.status = "disabled"
+    elif band.status == "disabled" and band.child_id:
+        band.status = "active"
+    db.session.commit()
+    return redirect(url_for("admin_dashboard", q=request.args.get("q", "")))
 
 
 @app.cli.command("init-db")
