@@ -21,6 +21,21 @@
   <button class="btn btn-sm" type="submit" style="margin-top:0;">Caută</button>
 </form>
 
+<div class="card" style="padding:20px 22px; margin-top:16px;">
+  <h2 style="margin-bottom:8px;">Generează brățări reale</h2>
+  <p class="muted small" style="margin-bottom:14px;">Coduri unice de producție (fără prefix TEST).
+    Nu se repetă niciodată.</p>
+  <form method="post" action="{{ url_for('admin_generate') }}" style="display:flex; gap:10px;">
+    <input type="number" name="count" min="1" max="1000" value="100" style="max-width:120px;">
+    <button class="btn btn-primary btn-sm" type="submit" style="margin-top:0;">Generează</button>
+  </form>
+  <form method="post" action="{{ url_for('admin_download_all_unactivated') }}" style="margin-top:12px;">
+    <button class="btn btn-ghost btn-sm" type="submit" style="margin-top:0;">
+      Descarcă QR-urile tuturor brățărilor libere ({{ stats.unactivated_bands }})
+    </button>
+  </form>
+</div>
+
 {% if q and children %}
 <h2 style="margin-top:24px;">Copii găsiți</h2>
 {% for c in children %}

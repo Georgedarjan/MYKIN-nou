@@ -4,7 +4,8 @@ from email.mime.text import MIMEText
 from datetime import datetime
 
 from flask import (
-    Flask, render_template, request, redirect, url_for, flash, abort, session
+    Flask, render_template, request, redirect, url_for, flash, abort, session,
+    send_file
 )
 from flask_login import (
     LoginManager, login_user, logout_user, login_required, current_user
@@ -493,6 +494,112 @@ def admin_toggle_band(band_id):
         band.status = "active"
     db.session.commit()
     return redirect(url_for("admin_dashboard", q=request.args.get("q", "")))
+
+
+# ---------------------------------------------------------------------------
+# GENERARE BRĂȚĂRI REALE (din admin, direct pe server — fără laptop)
+# ---------------------------------------------------------------------------
+import io
+import zipfile
+import csv as _csv
+import qrcode as _qrcode
+
+_CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"  # fără 0,O,1,I,L
+
+
+def _make_real_code():
+    return "".join(_secrets.choice(_CODE_ALPHABET) for _ in range(8))
+
+
+@app.route("/admin/generate", methods=["POST"])
+@admin_required
+def admin_generate():
+    try:
+        n = int(request.form.get("count", "0"))
+    except (ValueError, TypeError):
+        n = 0
+    n = max(0, min(n, 1000))  # maxim 1000 odată
+    if n == 0:
+        flash("Introdu un număr valid de brățări.")
+        return redirect(url_for("admin_dashboard"))
+
+    created = []
+    while len(created) < n:
+        code = _make_real_code()
+        if Band.query.filter_by(code=code).first():
+            continue
+        db.session.add(Band(code=code, status="unactivated"))
+        created.append(code)
+    db.session.commit()
+
+    base = Config.BASE_URL.rstrip("/")
+    return render_template("admin_generated.html", codes=created,
+                           base_url=base, count=len(created))
+
+
+@app.route("/admin/download-qr", methods=["POST"])
+@admin_required
+def admin_download_qr():
+    """Primește o listă de coduri (separate prin virgulă) și întoarce un ZIP
+    cu QR-urile PNG + un CSV cu URL-urile pentru NFC."""
+    codes_raw = request.form.get("codes", "")
+    codes = [c.strip() for c in codes_raw.split(",") if c.strip()]
+    if not codes:
+        flash("Niciun cod de descărcat.")
+        return redirect(url_for("admin_dashboard"))
+
+    base = Config.BASE_URL.rstrip("/")
+    mem = io.BytesIO()
+    with zipfile.ZipFile(mem, "w", zipfile.ZIP_DEFLATED) as zf:
+        # QR PNG pentru fiecare cod
+        for code in codes:
+            url = f"{base}/b/{code}"
+            img = _qrcode.make(url)
+            img_bytes = io.BytesIO()
+            img.save(img_bytes, format="PNG")
+            zf.writestr(f"qr/{code}.png", img_bytes.getvalue())
+        # CSV cu URL-urile pentru NFC
+        csv_str = io.StringIO()
+        writer = _csv.writer(csv_str)
+        writer.writerow(["code", "url"])
+        for code in codes:
+            writer.writerow([code, f"{base}/b/{code}"])
+        zf.writestr("nfc_urls.csv", csv_str.getvalue())
+
+    mem.seek(0)
+    return send_file(mem, mimetype="application/zip", as_attachment=True,
+                     download_name="mykin_bratari_qr.zip")
+
+
+@app.route("/admin/download-all-unactivated", methods=["POST"])
+@admin_required
+def admin_download_all_unactivated():
+    """Descarcă QR-urile pentru TOATE brățările neactivate (utile de trimis la fabricant)."""
+    bands = Band.query.filter_by(status="unactivated").all()
+    codes = [b.code for b in bands]
+    if not codes:
+        flash("Nu există brățări neactivate.")
+        return redirect(url_for("admin_dashboard"))
+
+    base = Config.BASE_URL.rstrip("/")
+    mem = io.BytesIO()
+    with zipfile.ZipFile(mem, "w", zipfile.ZIP_DEFLATED) as zf:
+        for code in codes:
+            url = f"{base}/b/{code}"
+            img = _qrcode.make(url)
+            img_bytes = io.BytesIO()
+            img.save(img_bytes, format="PNG")
+            zf.writestr(f"qr/{code}.png", img_bytes.getvalue())
+        csv_str = io.StringIO()
+        writer = _csv.writer(csv_str)
+        writer.writerow(["code", "url"])
+        for code in codes:
+            writer.writerow([code, f"{base}/b/{code}"])
+        zf.writestr("nfc_urls.csv", csv_str.getvalue())
+
+    mem.seek(0)
+    return send_file(mem, mimetype="application/zip", as_attachment=True,
+                     download_name="mykin_toate_neactivate_qr.zip")
 
 
 @app.cli.command("init-db")

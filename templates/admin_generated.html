@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Admin — Brățări generate{% endblock %}
+{% block wrapclass %}admin-wrap{% endblock %}
+{% block body %}
+<div class="topbar">
+  <a class="brand" href="{{ url_for('admin_dashboard') }}"><span class="dot"></span> MyKin Admin</a>
+  <a href="{{ url_for('admin_dashboard') }}">Înapoi</a>
+</div>
+
+<div class="card">
+  <h1>{{ count }} brățări generate</h1>
+  <p class="muted small">Codurile sunt salvate în baza de date. Descarcă QR-urile
+    și fișierul pentru NFC ca să le trimiți la fabricant.</p>
+
+  <form method="post" action="{{ url_for('admin_download_qr') }}">
+    <input type="hidden" name="codes" value="{{ codes|join(',') }}">
+    <button class="btn btn-primary" type="submit">Descarcă QR-uri + fișier NFC (ZIP)</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Codurile generate</h2>
+  {% for code in codes %}
+  <div style="padding:8px 0; border-bottom:1px solid var(--line); font-size:14px;">
+    <b style="color:var(--forest);">{{ code }}</b>
+    <span class="muted"> — {{ base_url }}/b/{{ code }}</span>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

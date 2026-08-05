@@ -13,6 +13,20 @@ class Config:
     _db_url = os.environ.get("DATABASE_URL", "sqlite:///mykin.db")
     if _db_url.startswith("postgres://"):
         _db_url = _db_url.replace("postgres://", "postgresql://", 1)
+
+    # Detectăm ce driver de Postgres e disponibil:
+    # - pe Render avem psycopg2-binary (default SQLAlchemy)
+    # - local pe Windows/Python nou avem psycopg v3 -> folosim dialectul +psycopg
+    if _db_url.startswith("postgresql://"):
+        try:
+            import psycopg2  # noqa: F401
+        except ImportError:
+            try:
+                import psycopg  # noqa: F401
+                _db_url = _db_url.replace("postgresql://", "postgresql+psycopg://", 1)
+            except ImportError:
+                pass  # niciun driver — va da eroare clară doar dacă se folosește Postgres
+
     SQLALCHEMY_DATABASE_URI = _db_url
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
