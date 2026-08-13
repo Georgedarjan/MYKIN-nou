@@ -1,0 +1,39 @@
+{# Fragment reutilizabil: 3 numere de telefon cu etichetă flexibilă + alegere principal.
+   Folosește variabila `child` (poate fi None la copil nou). #}
+{% set labels = ['Tată', 'Mamă', 'Bunic', 'Bunică', 'Tutore', 'Alt contact'] %}
+{% set p1 = child.parent_phone if child else '' %}
+{% set p2 = child.parent_phone_2 if child else '' %}
+{% set p3 = child.parent_phone_3 if child else '' %}
+{% set l1 = child.phone_label if child else '' %}
+{% set l2 = child.phone_label_2 if child else '' %}
+{% set l3 = child.phone_label_3 if child else '' %}
+{% set prim = (child.primary_phone or 1) if child else 1 %}
+
+<label>Numere de contact</label>
+<p class="small muted" style="margin-top:-2px;">Alege cine e fiecare număr. Bifează pe care să-l sune pe WhatsApp (principal).</p>
+
+<div class="phone-row">
+  <select name="phone_label" class="phone-label">
+    {% for opt in labels %}<option value="{{ opt }}" {% if l1==opt %}selected{% endif %}>{{ opt }}</option>{% endfor %}
+  </select>
+  <input type="tel" name="parent_phone" value="{{ p1 or '' }}" placeholder="07xx xxx xxx *" required class="phone-input">
+  <label class="phone-primary"><input type="radio" name="primary_phone" value="1" {% if prim==1 %}checked{% endif %}> principal</label>
+</div>
+
+<div class="phone-row">
+  <select name="phone_label_2" class="phone-label">
+    <option value="">—</option>
+    {% for opt in labels %}<option value="{{ opt }}" {% if l2==opt %}selected{% endif %}>{{ opt }}</option>{% endfor %}
+  </select>
+  <input type="tel" name="parent_phone_2" value="{{ p2 or '' }}" placeholder="07xx xxx xxx (opțional)" class="phone-input">
+  <label class="phone-primary"><input type="radio" name="primary_phone" value="2" {% if prim==2 %}checked{% endif %}> principal</label>
+</div>
+
+<div class="phone-row">
+  <select name="phone_label_3" class="phone-label">
+    <option value="">—</option>
+    {% for opt in labels %}<option value="{{ opt }}" {% if l3==opt %}selected{% endif %}>{{ opt }}</option>{% endfor %}
+  </select>
+  <input type="tel" name="parent_phone_3" value="{{ p3 or '' }}" placeholder="07xx xxx xxx (opțional)" class="phone-input">
+  <label class="phone-primary"><input type="radio" name="primary_phone" value="3" {% if prim==3 %}checked{% endif %}> principal</label>
+</div>
