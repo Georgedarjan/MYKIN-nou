@@ -359,3 +359,59 @@ textarea { min-height: 74px; resize: vertical; }
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
   .admin-row { flex-direction: column; align-items: flex-start; }
 }
+
+/* ---------- Listă alergii / condiții (fiecare pe rândul ei) ---------- */
+.alert-list {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+}
+.alert-list li {
+  position: relative;
+  padding: 5px 0 5px 16px;
+  font-size: 15.5px;
+  font-weight: 500;
+  color: var(--forest);
+  border-top: 1px solid #F3D9C8;
+}
+.alert-list li:first-child { border-top: none; }
+.alert-list li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--coral);
+}
+
+/* ---------- Rânduri telefon (etichetă + număr + principal) ---------- */
+.phone-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.phone-label { flex: 0 0 92px; padding: 11px 8px; font-size: 14px; }
+.phone-input { flex: 1 1 140px; }
+.phone-primary {
+  display: flex; align-items: center; gap: 5px;
+  margin: 0; font-size: 12.5px; font-weight: 500; color: var(--muted);
+  white-space: nowrap; cursor: pointer;
+}
+.phone-primary input { width: 16px; height: 16px; accent-color: var(--coral); }
+@media (max-width: 420px) {
+  .phone-label { flex: 0 0 78px; }
+  .phone-primary { flex-basis: 100%; margin-left: 2px; }
+}
+
+/* ---------- Câmp gen (băiat/fată) ---------- */
+.gender-row { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 4px; }
+.gender-opt {
+  display: flex; align-items: center; gap: 6px;
+  margin: 0; font-size: 14.5px; font-weight: 500; color: var(--ink); cursor: pointer;
+}
+.gender-opt input { width: 17px; height: 17px; accent-color: var(--forest); }

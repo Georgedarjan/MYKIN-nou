@@ -16,11 +16,9 @@
     <label>Numele copilului</label>
     <input type="text" name="name" value="{{ child.name }}" required>
 
-    <label>Numărul de telefon *</label>
-    <input type="tel" name="parent_phone" value="{{ child.parent_phone }}" required>
+    {% include "_gender_field.html" %}
 
-    <label>Contact secundar</label>
-    <input type="tel" name="parent_phone_2" value="{{ child.parent_phone_2 or '' }}">
+    {% include "_phone_fields.html" %}
 
     <label>Alergii</label>
     <textarea name="allergies">{{ child.allergies or '' }}</textarea>

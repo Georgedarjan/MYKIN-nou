@@ -17,17 +17,12 @@
     <div class="child-sub">Sunați părintele — vă răspunde imediat.</div>
   {% endif %}
 
-  <a class="call-btn" href="tel:{{ child.parent_phone }}">
+  {% for c in child.contacts() %}
+  <a class="call-btn {% if not loop.first %}btn-forest{% endif %}" href="tel:{{ c.phone }}">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-    Sună părintele
+    Sună {{ c.label }}
   </a>
-
-  {% if child.parent_phone_2 %}
-  <a class="call-btn btn-forest" href="tel:{{ child.parent_phone_2 }}">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-    Contact secundar
-  </a>
-  {% endif %}
+  {% endfor %}
 
   {% if not is_owner %}
   <a id="wa-btn" href="#" class="call-btn btn-wa">
@@ -41,9 +36,13 @@
     <span class="ac-icon">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
     </span>
-    <div>
+    <div style="flex:1;">
       <div class="info-label">Alergii</div>
-      <div class="info-value">{{ child.allergies }}</div>
+      <ul class="alert-list">
+        {% for item in child.allergies|as_list %}
+        <li>{{ item }}</li>
+        {% endfor %}
+      </ul>
     </div>
   </div>
   {% endif %}
@@ -53,9 +52,13 @@
     <span class="ac-icon">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
     </span>
-    <div>
+    <div style="flex:1;">
       <div class="info-label">Condiții medicale</div>
-      <div class="info-value">{{ child.medical }}</div>
+      <ul class="alert-list">
+        {% for item in child.medical|as_list %}
+        <li>{{ item }}</li>
+        {% endfor %}
+      </ul>
     </div>
   </div>
   {% endif %}
@@ -105,7 +108,8 @@
     if (!waBtn) return;
 
     var childName = {{ (child.name if child.show_name and child.name else '')|tojson }};
-    var parentPhone = {{ child.parent_phone|tojson }};
+    var childGender = {{ (child.gender or '')|tojson }};
+    var parentPhone = {{ (child.primary_contact().phone if child.primary_contact() else child.parent_phone)|tojson }};
 
     function normalizePhone(p) {
       var d = (p || '').replace(/[^0-9]/g, '');
@@ -113,9 +117,18 @@
       return d;
     }
 
+    function foundText() {
+      // Formulare gramatical corectă în funcție de gen și de vizibilitatea numelui.
+      if (childName) {
+        if (childGender === 'boy')  return 'L-am găsit pe ' + childName;
+        if (childGender === 'girl') return 'Am găsit-o pe ' + childName;
+        return 'Am găsit copilul ' + childName;  // gen nespecificat
+      }
+      return 'Am găsit un copil cu brățară MyKin';  // nume ascuns
+    }
+
     function waUrl(mapsLink) {
-      var whoText = childName ? ('lui ' + childName) : 'copilul dumneavoastră';
-      var msg = 'Bună ziua! Am găsit ' + whoText + '. ' +
+      var msg = 'Bună ziua! ' + foundText() + '. ' +
                 (mapsLink ? ('Mă aflu aici: ' + mapsLink) : 'Vă rog sunați-mă.');
       return 'https://wa.me/' + normalizePhone(parentPhone) +
              '?text=' + encodeURIComponent(msg);

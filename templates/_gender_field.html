@@ -1,0 +1,9 @@
+{# Câmp Băiat/Fată, opțional. Folosește variabila `child` (poate fi None). #}
+{% set g = child.gender if child else '' %}
+<label>Băiat sau fată? (opțional)</label>
+<div class="gender-row">
+  <label class="gender-opt"><input type="radio" name="gender" value="boy" {% if g=='boy' %}checked{% endif %}> Băiat</label>
+  <label class="gender-opt"><input type="radio" name="gender" value="girl" {% if g=='girl' %}checked{% endif %}> Fată</label>
+  <label class="gender-opt"><input type="radio" name="gender" value="" {% if not g %}checked{% endif %}> Nespecificat</label>
+</div>
+<p class="small muted" style="margin-top:2px;">Ajută la formularea corectă a mesajului trimis pe WhatsApp.</p>

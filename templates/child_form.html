@@ -15,17 +15,17 @@
     <label>Numele copilului</label>
     <input type="text" name="name" value="{{ child.name }}" required>
 
-    <label>Numărul tău de telefon *</label>
-    <input type="tel" name="parent_phone" value="{{ child.parent_phone }}" required>
+    {% include "_gender_field.html" %}
 
-    <label>Contact secundar</label>
-    <input type="tel" name="parent_phone_2" value="{{ child.parent_phone_2 or '' }}">
+    {% include "_phone_fields.html" %}
 
     <label>Alergii</label>
-    <textarea name="allergies">{{ child.allergies or '' }}</textarea>
+    <textarea name="allergies" placeholder="Scrie fiecare alergie pe câte un rând">{{ child.allergies or '' }}</textarea>
+    <p class="small muted" style="margin-top:4px;">Câte una pe rând (ex: arahide, apoi Enter, apoi penicilină).</p>
 
     <label>Condiții medicale</label>
-    <textarea name="medical">{{ child.medical or '' }}</textarea>
+    <textarea name="medical" placeholder="Scrie fiecare condiție pe câte un rând">{{ child.medical or '' }}</textarea>
+    <p class="small muted" style="margin-top:4px;">Câte una pe rând.</p>
 
     <label>Alte informații</label>
     <textarea name="notes">{{ child.notes or '' }}</textarea>

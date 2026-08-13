@@ -25,6 +25,22 @@ login_manager.login_view = "login"
 login_manager.login_message = "Autentifică-te ca să continui."
 
 
+@app.template_filter("as_list")
+def as_list(text):
+    """Sparge un text în elemente separate: după linii noi ȘI după virgulă.
+    Merge și pentru datele vechi (scrise cu virgulă) și pentru cele noi (pe linii).
+    Ex: 'arahide, penicilină\\nlactoză' -> ['arahide', 'penicilină', 'lactoză']"""
+    if not text:
+        return []
+    items = []
+    for line in text.replace("\r", "").split("\n"):
+        for part in line.split(","):
+            part = part.strip()
+            if part:
+                items.append(part)
+    return items
+
+
 # ---------------------------------------------------------------------------
 # CLOUDINARY — stocarea pozelor (opțional; funcționează doar dacă e configurat)
 # ---------------------------------------------------------------------------
@@ -170,11 +186,21 @@ def activate(code):
         if child_id == "new" or not children:
             # Creează un copil nou din datele formularului
             photo_url = upload_child_photo(request.files.get("photo"))
+            try:
+                primary = int(request.form.get("primary_phone", "1"))
+            except (ValueError, TypeError):
+                primary = 1
             child = Child(
                 user_id=current_user.id,
                 name=request.form["name"].strip(),
+                gender=request.form.get("gender", "").strip() or None,
                 parent_phone=request.form["parent_phone"].strip(),
                 parent_phone_2=request.form.get("parent_phone_2", "").strip() or None,
+                parent_phone_3=request.form.get("parent_phone_3", "").strip() or None,
+                phone_label=request.form.get("phone_label", "").strip() or None,
+                phone_label_2=request.form.get("phone_label_2", "").strip() or None,
+                phone_label_3=request.form.get("phone_label_3", "").strip() or None,
+                primary_phone=primary,
                 allergies=request.form.get("allergies", "").strip() or None,
                 medical=request.form.get("medical", "").strip() or None,
                 notes=request.form.get("notes", "").strip() or None,
@@ -264,8 +290,17 @@ def edit_child(child_id):
 
     if request.method == "POST":
         child.name = request.form["name"].strip()
+        child.gender = request.form.get("gender", "").strip() or None
         child.parent_phone = request.form["parent_phone"].strip()
         child.parent_phone_2 = request.form.get("parent_phone_2", "").strip() or None
+        child.parent_phone_3 = request.form.get("parent_phone_3", "").strip() or None
+        child.phone_label = request.form.get("phone_label", "").strip() or None
+        child.phone_label_2 = request.form.get("phone_label_2", "").strip() or None
+        child.phone_label_3 = request.form.get("phone_label_3", "").strip() or None
+        try:
+            child.primary_phone = int(request.form.get("primary_phone", "1"))
+        except (ValueError, TypeError):
+            child.primary_phone = 1
         child.allergies = request.form.get("allergies", "").strip() or None
         child.medical = request.form.get("medical", "").strip() or None
         child.notes = request.form.get("notes", "").strip() or None
@@ -337,6 +372,27 @@ def migreaza_photo_url():
             ))
             conn.commit()
         return "Gata: coloana photo_url a fost adăugată (sau exista deja). Poți șterge această rută acum."
+    except Exception as e:
+        return f"Eroare la migrare: {e}", 500
+
+
+@app.route("/migreaza-telefoane")
+def migreaza_telefoane():
+    """Adaugă coloanele pentru al treilea telefon + etichete + număr principal."""
+    cols = [
+        "ALTER TABLE children ADD COLUMN IF NOT EXISTS parent_phone_3 VARCHAR(40)",
+        "ALTER TABLE children ADD COLUMN IF NOT EXISTS phone_label VARCHAR(30)",
+        "ALTER TABLE children ADD COLUMN IF NOT EXISTS phone_label_2 VARCHAR(30)",
+        "ALTER TABLE children ADD COLUMN IF NOT EXISTS phone_label_3 VARCHAR(30)",
+        "ALTER TABLE children ADD COLUMN IF NOT EXISTS primary_phone INTEGER DEFAULT 1",
+        "ALTER TABLE children ADD COLUMN IF NOT EXISTS gender VARCHAR(10)",
+    ]
+    try:
+        with db.engine.connect() as conn:
+            for c in cols:
+                conn.execute(_sql_text(c))
+            conn.commit()
+        return "Gata: coloanele de telefon au fost adăugate. Poți șterge această rută acum."
     except Exception as e:
         return f"Eroare la migrare: {e}", 500
 
@@ -460,8 +516,17 @@ def admin_edit_child(child_id):
 
     if request.method == "POST":
         child.name = request.form["name"].strip()
+        child.gender = request.form.get("gender", "").strip() or None
         child.parent_phone = request.form["parent_phone"].strip()
         child.parent_phone_2 = request.form.get("parent_phone_2", "").strip() or None
+        child.parent_phone_3 = request.form.get("parent_phone_3", "").strip() or None
+        child.phone_label = request.form.get("phone_label", "").strip() or None
+        child.phone_label_2 = request.form.get("phone_label_2", "").strip() or None
+        child.phone_label_3 = request.form.get("phone_label_3", "").strip() or None
+        try:
+            child.primary_phone = int(request.form.get("primary_phone", "1"))
+        except (ValueError, TypeError):
+            child.primary_phone = 1
         child.allergies = request.form.get("allergies", "").strip() or None
         child.medical = request.form.get("medical", "").strip() or None
         child.notes = request.form.get("notes", "").strip() or None

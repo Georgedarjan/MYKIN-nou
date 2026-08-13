@@ -33,8 +33,16 @@ class Child(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
 
     name = db.Column(db.String(120), nullable=False)
+    gender = db.Column(db.String(10))  # 'boy' / 'girl' (opțional, pt gramatica mesajului)
     parent_phone = db.Column(db.String(40), nullable=False)
-    parent_phone_2 = db.Column(db.String(40))  # contact secundar opțional
+    parent_phone_2 = db.Column(db.String(40))  # al doilea contact, opțional
+    parent_phone_3 = db.Column(db.String(40))  # al treilea contact, opțional
+    # etichete flexibile pentru fiecare număr (Tată/Mamă/Bunic/Tutore/etc.)
+    phone_label = db.Column(db.String(30))
+    phone_label_2 = db.Column(db.String(30))
+    phone_label_3 = db.Column(db.String(30))
+    # care număr e principal pentru WhatsApp: 1, 2 sau 3
+    primary_phone = db.Column(db.Integer, default=1)
     allergies = db.Column(db.Text)
     medical = db.Column(db.Text)
     notes = db.Column(db.Text)  # ex: "Nu vorbește româna", "poartă aparat auditiv"
@@ -50,6 +58,36 @@ class Child(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     bands = db.relationship("Band", backref="child")
+
+    def contacts(self):
+        """Întoarce lista contactelor completate: [(eticheta, numar, e_principal), ...].
+        Doar numerele completate apar. Eticheta implicită dacă lipsește: 'Contact'."""
+        raw = [
+            (self.phone_label, self.parent_phone, 1),
+            (self.phone_label_2, self.parent_phone_2, 2),
+            (self.phone_label_3, self.parent_phone_3, 3),
+        ]
+        primary = self.primary_phone or 1
+        result = []
+        for label, phone, idx in raw:
+            if phone and phone.strip():
+                result.append({
+                    "label": (label or "").strip() or "Contact",
+                    "phone": phone.strip(),
+                    "is_primary": (idx == primary),
+                })
+        # dacă numărul marcat principal nu e completat, primul devine principal
+        if not any(c["is_primary"] for c in result) and result:
+            result[0]["is_primary"] = True
+        return result
+
+    def primary_contact(self):
+        """Contactul principal (pentru WhatsApp)."""
+        for c in self.contacts():
+            if c["is_primary"]:
+                return c
+        cs = self.contacts()
+        return cs[0] if cs else None
 
 
 class Band(db.Model):
