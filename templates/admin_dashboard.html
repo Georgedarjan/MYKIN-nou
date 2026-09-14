@@ -50,6 +50,17 @@
   </form>
 </div>
 
+<div class="card" style="padding:20px 22px; margin-top:0; border-color:#F0C4BF;">
+  <h2 style="margin-bottom:8px; color:#9A3B31;">Curăță brățările de test</h2>
+  <p class="muted small" style="margin-bottom:14px;">Șterge toate brățările <b>libere</b> (neactivate),
+    PĂSTREAZĂ automat pe cele activate + cele 5 trimise la supplier. Scrie <b>STERGE</b> ca să confirmi.</p>
+  <form method="post" action="{{ url_for('admin_cleanup_test') }}" style="display:flex; gap:10px;"
+        onsubmit="return confirm('Sigur ștergi brățările de test? Cele activate și cele de la supplier rămân. Acțiunea nu poate fi anulată.');">
+    <input type="text" name="confirm" placeholder="Scrie STERGE" style="max-width:160px;">
+    <button class="btn btn-danger btn-sm" type="submit" style="margin-top:0;">Șterge testele</button>
+  </form>
+</div>
+
 <h2 style="margin-top:24px;">
   {% if q or status_filter %}Rezultate ({{ bands|length }}){% else %}Ultimele brățări{% endif %}
 </h2>

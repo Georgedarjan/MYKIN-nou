@@ -727,6 +727,36 @@ def admin_download_all_unactivated():
                      download_name="mykin_toate_neactivate_qr.zip")
 
 
+# Codurile trimise la supplier — NU se șterg niciodată la curățenia de test
+SUPPLIER_CODES = {"RYKUPNV3", "852YEEPJ", "3BBC9AJN", "9DVH752D", "2N24WYGM"}
+
+
+@app.route("/admin/cleanup-test", methods=["POST"])
+@admin_required
+def admin_cleanup_test():
+    """Șterge brățările NEACTIVATE de test.
+    Protejate automat: toate brățările ACTIVATE (au copil) + codurile de la supplier.
+    Cere confirmarea textuală 'STERGE' ca măsură de siguranță."""
+    confirm = request.form.get("confirm", "").strip().upper()
+    if confirm != "STERGE":
+        flash("Ștergere anulată — nu ai confirmat corect (trebuie să scrii STERGE).")
+        return redirect(url_for("admin_dashboard"))
+
+    # candidate: doar brățări neactivate, care NU sunt în lista supplier
+    to_delete = Band.query.filter(
+        Band.status == "unactivated",
+        ~Band.code.in_(SUPPLIER_CODES),
+    ).all()
+
+    count = len(to_delete)
+    for b in to_delete:
+        db.session.delete(b)
+    db.session.commit()
+
+    flash(f"S-au șters {count} brățări de test. Cele activate și cele {len(SUPPLIER_CODES)} de la supplier au fost păstrate.")
+    return redirect(url_for("admin_dashboard"))
+
+
 @app.cli.command("init-db")
 def init_db():
     """Creează tabelele. Rulează: flask init-db"""
