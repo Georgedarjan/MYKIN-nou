@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% block title %}Admin — MyKin{% endblock %}
+{% block title %}Admin — Kin{% endblock %}
 {% block wrapclass %}admin-wrap{% endblock %}
 {% block body %}
 <div class="topbar">
-  <a class="brand" href="{{ url_for('admin_dashboard') }}"><span class="dot"></span> MyKin Admin</a>
+  <a class="brand" href="{{ url_for('admin_dashboard') }}"><span class="dot"></span> Kin Admin</a>
   <a href="{{ url_for('admin_logout') }}">Ieși</a>
 </div>
 
@@ -16,9 +16,23 @@
   <div class="stat"><div class="stat-num">{{ stats.total_children }}</div><div class="stat-lbl">Copii</div></div>
 </div>
 
-<form method="get" class="admin-search">
-  <input type="text" name="q" value="{{ q }}" placeholder="Caută după cod brățară sau nume copil...">
-  <button class="btn btn-sm" type="submit" style="margin-top:0;">Caută</button>
+{# ---- Bară de filtrare ---- #}
+<form method="get" class="admin-filters">
+  <input type="text" name="q" value="{{ q }}" placeholder="Caută după cod, nume copil sau email client...">
+  <select name="status">
+    <option value="" {% if not status_filter %}selected{% endif %}>Toate statusurile</option>
+    <option value="active" {% if status_filter=='active' %}selected{% endif %}>Activate</option>
+    <option value="unactivated" {% if status_filter=='unactivated' %}selected{% endif %}>Libere</option>
+    <option value="disabled" {% if status_filter=='disabled' %}selected{% endif %}>Dezactivate</option>
+  </select>
+  <select name="sort">
+    <option value="recent" {% if sort=='recent' %}selected{% endif %}>Cele mai noi</option>
+    <option value="oldest" {% if sort=='oldest' %}selected{% endif %}>Cele mai vechi</option>
+  </select>
+  <button class="btn btn-primary btn-sm" type="submit" style="margin-top:0;">Filtrează</button>
+  {% if q or status_filter %}
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('admin_dashboard') }}" style="margin-top:0;">Resetează</a>
+  {% endif %}
 </form>
 
 <div class="card" style="padding:20px 22px; margin-top:16px;">
@@ -36,21 +50,8 @@
   </form>
 </div>
 
-{% if q and children %}
-<h2 style="margin-top:24px;">Copii găsiți</h2>
-{% for c in children %}
-<div class="admin-row">
-  <div>
-    <div class="admin-row-title">{{ c.name }}</div>
-    <div class="admin-row-meta">{{ c.parent_phone }}{% if c.allergies %} · alergii: {{ c.allergies }}{% endif %}</div>
-  </div>
-  <a class="btn btn-ghost btn-sm" href="{{ url_for('admin_edit_child', child_id=c.id) }}">Editează</a>
-</div>
-{% endfor %}
-{% endif %}
-
 <h2 style="margin-top:24px;">
-  {% if q %}Brățări găsite{% else %}Ultimele brățări{% endif %}
+  {% if q or status_filter %}Rezultate ({{ bands|length }}){% else %}Ultimele brățări{% endif %}
 </h2>
 {% if not bands %}
   <p class="muted small">Nicio brățară găsită.</p>
@@ -65,20 +66,32 @@
       </span>
     </div>
     {% if band.child %}
-      <div class="admin-row-meta">{{ band.child.name }} · {{ band.child.parent_phone }}</div>
+      <div class="admin-row-meta">
+        {{ band.child.name }} · {{ band.child.parent_phone }}
+        {% if band.owner %} · {{ band.owner.email }}{% endif %}
+      </div>
+      {% if band.activated_at %}
+      <div class="admin-row-meta">Activată: {{ band.activated_at.strftime('%d.%m.%Y') }}</div>
+      {% endif %}
     {% else %}
-      <div class="admin-row-meta">neactivată</div>
+      <div class="admin-row-meta">neactivată{% if band.created_at %} · creată {{ band.created_at.strftime('%d.%m.%Y') }}{% endif %}</div>
     {% endif %}
   </div>
-  <div style="display:flex; gap:8px; align-items:center;">
+  <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
     {% if band.child %}
       <a class="btn btn-ghost btn-sm" href="{{ url_for('admin_edit_child', child_id=band.child.id) }}">Editează</a>
     {% endif %}
     {% if band.status in ['active','disabled'] %}
-    <form method="post" action="{{ url_for('admin_toggle_band', band_id=band.id, q=q) }}" style="margin:0;">
-      <button class="btn btn-sm {% if band.status=='active' %}btn-danger{% else %}btn-ghost{% endif %}" type="submit" style="margin-top:0;">
+    <form method="post" action="{{ url_for('admin_toggle_band', band_id=band.id, q=q, status=status_filter) }}" style="margin:0;">
+      <button class="btn btn-sm btn-ghost" type="submit" style="margin-top:0;">
         {% if band.status == 'active' %}Dezactivează{% else %}Reactivează{% endif %}
       </button>
+    </form>
+    {% endif %}
+    {% if band.child %}
+    <form method="post" action="{{ url_for('admin_reset_band', band_id=band.id, q=q, status=status_filter) }}" style="margin:0;"
+          onsubmit="return confirm('Sigur resetezi brățara {{ band.code }} din fabrică? Datele copilului vor fi șterse și brățara devine liberă. Această acțiune nu poate fi anulată.');">
+      <button class="btn btn-sm btn-danger" type="submit" style="margin-top:0;">Resetează</button>
     </form>
     {% endif %}
   </div>

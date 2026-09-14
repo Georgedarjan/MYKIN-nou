@@ -479,6 +479,8 @@ def admin_logout():
 @admin_required
 def admin_dashboard():
     q = request.args.get("q", "").strip()
+    status_filter = request.args.get("status", "").strip()
+    sort = request.args.get("sort", "recent").strip()
 
     total_bands = Band.query.count()
     active_bands = Band.query.filter_by(status="active").count()
@@ -487,13 +489,42 @@ def admin_dashboard():
     total_users = User.query.count()
     total_children = Child.query.count()
 
-    # căutare după cod de brățară sau nume copil
+    # Construim query-ul de brățări cu filtre combinate
+    bq = Band.query
+
+    # filtru după status
+    if status_filter in ("active", "unactivated", "disabled"):
+        bq = bq.filter(Band.status == status_filter)
+
+    # căutare text: cod brățară, nume copil, sau email client
     if q:
-        bands = Band.query.filter(Band.code.ilike(f"%{q}%")).order_by(Band.id.desc()).all()
-        children = Child.query.filter(Child.name.ilike(f"%{q}%")).all()
+        # brățări care se potrivesc după cod
+        matching_band_ids = set(
+            b.id for b in Band.query.filter(Band.code.ilike(f"%{q}%")).all()
+        )
+        # brățări ale căror copil se potrivește după nume
+        child_matches = Child.query.filter(Child.name.ilike(f"%{q}%")).all()
+        for c in child_matches:
+            for b in c.bands:
+                matching_band_ids.add(b.id)
+        # brățări ale căror proprietar (user) se potrivește după email
+        user_matches = User.query.filter(User.email.ilike(f"%{q}%")).all()
+        for u in user_matches:
+            for b in u.bands:
+                matching_band_ids.add(b.id)
+        bq = bq.filter(Band.id.in_(matching_band_ids)) if matching_band_ids else bq.filter(Band.id == -1)
+
+    # sortare
+    if sort == "oldest":
+        bq = bq.order_by(Band.id.asc())
     else:
-        bands = Band.query.order_by(Band.id.desc()).limit(100).all()
-        children = []
+        bq = bq.order_by(Band.id.desc())
+
+    # dacă nu e nicio căutare/filtru, limităm la ultimele 100
+    if not q and not status_filter:
+        bands = bq.limit(100).all()
+    else:
+        bands = bq.all()
 
     stats = {
         "total_bands": total_bands,
@@ -504,7 +535,7 @@ def admin_dashboard():
         "total_children": total_children,
     }
     return render_template("admin_dashboard.html", stats=stats, bands=bands,
-                           children=children, q=q)
+                           q=q, status_filter=status_filter, sort=sort)
 
 
 @app.route("/admin/child/<int:child_id>", methods=["GET", "POST"])
@@ -559,6 +590,35 @@ def admin_toggle_band(band_id):
         band.status = "active"
     db.session.commit()
     return redirect(url_for("admin_dashboard", q=request.args.get("q", "")))
+
+
+@app.route("/admin/band/<int:band_id>/reset", methods=["POST"])
+@admin_required
+def admin_reset_band(band_id):
+    """Resetare din fabrică: dezleagă brățara de copil și o face liberă din nou.
+    Șterge copilul asociat DOAR dacă nu mai are alte brățări legate de el.
+    Contul clientului și ceilalți copii ai lui rămân neatinși."""
+    band = db.session.get(Band, band_id)
+    if not band:
+        abort(404)
+
+    child = band.child
+    # dezleagă brățara
+    band.status = "unactivated"
+    band.child_id = None
+    band.user_id = None
+    band.activated_at = None
+
+    # dacă acel copil nu mai are alte brățări active, îl ștergem (curățare date)
+    if child:
+        remaining = Band.query.filter(Band.child_id == child.id, Band.id != band.id).count()
+        if remaining == 0:
+            db.session.delete(child)
+
+    db.session.commit()
+    flash(f"Brățara {band.code} a fost resetată din fabrică și e liberă din nou.")
+    return redirect(url_for("admin_dashboard", q=request.args.get("q", ""),
+                            status=request.args.get("status", "")))
 
 
 # ---------------------------------------------------------------------------
