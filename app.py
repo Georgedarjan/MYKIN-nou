@@ -271,6 +271,120 @@ def logout():
 
 
 # ---------------------------------------------------------------------------
+# AI UITAT PAROLA — link de resetare trimis pe email prin Resend
+# Tokenul e semnat cu SECRET_KEY, expiră în 1 oră și devine invalid
+# imediat ce parola e schimbată (conține o amprentă a parolei curente).
+# Nu necesită modificări în baza de date.
+# ---------------------------------------------------------------------------
+import json as _json
+import urllib.request as _urlreq
+from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
+
+RESET_MAX_AGE = 3600  # secunde (1 oră)
+
+
+def _reset_serializer():
+    return URLSafeTimedSerializer(app.config["SECRET_KEY"], salt="kin-reset-parola")
+
+
+def _password_fingerprint(user):
+    return user.password_hash[-16:]
+
+
+def make_reset_token(user):
+    return _reset_serializer().dumps({"uid": user.id, "ph": _password_fingerprint(user)})
+
+
+def user_from_reset_token(token):
+    try:
+        data = _reset_serializer().loads(token, max_age=RESET_MAX_AGE)
+    except (SignatureExpired, BadSignature):
+        return None
+    user = db.session.get(User, data.get("uid"))
+    if not user or data.get("ph") != _password_fingerprint(user):
+        return None  # parola a fost deja schimbată -> link folosit
+    return user
+
+
+def send_reset_email(user, link):
+    """Trimite emailul prin API-ul Resend. Întoarce True dacă a mers."""
+    api_key = os.environ.get("RESEND_API_KEY", "")
+    sender = os.environ.get("MAIL_FROM", "Kin <no-reply@mykin.ro>")
+    if not api_key:
+        app.logger.warning("RESEND_API_KEY lipsește — emailul de resetare nu a fost trimis.")
+        return False
+
+    html = render_template("email_reset.html", link=link)
+    text = (
+        "Ai cerut resetarea parolei pentru contul tău Kin.\n\n"
+        f"Deschide linkul de mai jos ca să alegi o parolă nouă (valabil 1 oră):\n{link}\n\n"
+        "Dacă nu tu ai cerut asta, ignoră acest email. Parola ta rămâne neschimbată."
+    )
+    payload = _json.dumps({
+        "from": sender,
+        "to": [user.email],
+        "subject": "Resetează parola contului Kin",
+        "html": html,
+        "text": text,
+    }).encode("utf-8")
+    req = _urlreq.Request(
+        "https://api.resend.com/emails",
+        data=payload,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+            "User-Agent": "kin-app/1.0",
+        },
+        method="POST",
+    )
+    try:
+        with _urlreq.urlopen(req, timeout=10) as resp:
+            return 200 <= resp.status < 300
+    except Exception as e:
+        app.logger.warning(f"Trimiterea emailului de resetare a eșuat: {e}")
+        return False
+
+
+@app.route("/am-uitat-parola", methods=["GET", "POST"])
+def forgot_password():
+    if current_user.is_authenticated:
+        return redirect(url_for("dashboard"))
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        user = User.query.filter_by(email=email).first() if email else None
+        if user:
+            link = f"{Config.BASE_URL.rstrip('/')}{url_for('reset_password', token=make_reset_token(user))}"
+            send_reset_email(user, link)
+        # același mesaj indiferent dacă există contul (nu dezvăluim cine are cont)
+        flash("Dacă există un cont cu acest email, ți-am trimis un link de resetare. "
+              "Verifică și folderul Spam.")
+        return redirect(url_for("login"))
+    return render_template("forgot_password.html")
+
+
+@app.route("/reset-parola/<token>", methods=["GET", "POST"])
+def reset_password(token):
+    user = user_from_reset_token(token)
+    if not user:
+        flash("Linkul de resetare a expirat sau a fost deja folosit. Cere unul nou.")
+        return redirect(url_for("forgot_password"))
+    if request.method == "POST":
+        pw = request.form.get("password", "")
+        pw2 = request.form.get("password2", "")
+        if len(pw) < 6:
+            flash("Parola trebuie să aibă cel puțin 6 caractere.")
+            return redirect(url_for("reset_password", token=token))
+        if pw != pw2:
+            flash("Parolele nu coincid.")
+            return redirect(url_for("reset_password", token=token))
+        user.set_password(pw)
+        db.session.commit()
+        flash("Parola a fost schimbată. Te poți autentifica acum.")
+        return redirect(url_for("login"))
+    return render_template("reset_password.html")
+
+
+# ---------------------------------------------------------------------------
 # DASHBOARD PĂRINTE
 # ---------------------------------------------------------------------------
 @app.route("/dashboard")
