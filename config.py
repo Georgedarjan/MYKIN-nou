@@ -26,6 +26,8 @@ class Config:
     if _db_url.startswith("postgresql://"):
         try:
             import psycopg2  # noqa: F401
+            # explicit: SQLAlchemy 2.1+ folosește implicit psycopg (v3), nu psycopg2
+            _db_url = _db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
         except ImportError:
             try:
                 import psycopg  # noqa: F401
