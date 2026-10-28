@@ -13,6 +13,12 @@ class Config:
     _db_url = os.environ.get("DATABASE_URL", "sqlite:///mykin.db")
     if _db_url.startswith("postgres://"):
         _db_url = _db_url.replace("postgres://", "postgresql://", 1)
+    # Dacă adresa vine cu un driver anume (postgresql+psycopg:// etc.), îl scoatem
+    # și lăsăm detectarea de mai jos să aleagă driverul instalat efectiv.
+    for _prefix in ("postgresql+psycopg2://", "postgresql+psycopg://"):
+        if _db_url.startswith(_prefix):
+            _db_url = "postgresql://" + _db_url[len(_prefix):]
+            break
 
     # Detectăm ce driver de Postgres e disponibil:
     # - pe Render avem psycopg2-binary (default SQLAlchemy)
